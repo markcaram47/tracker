@@ -534,8 +534,9 @@ function renderCards() {
 
     el.innerHTML = '';
     filtered.forEach(c => {
-        const urgency = getUrgency(c.dueDate);
-        const diff = daysDiff(c.dueDate);
+        const paidThisCycle = c.paidAt === today();
+        const urgency = paidThisCycle ? 'none' : getUrgency(c.dueDate);
+        const diff = paidThisCycle ? null : daysDiff(c.dueDate);
         const utilPct = c.creditLimit ? Math.min(100, (parseFloat(c.balance) / parseFloat(c.creditLimit)) * 100) : 0;
         const utilColor = utilPct >= 90 ? 'red' : utilPct >= 60 ? 'yellow' : 'green';
         const colors = ['linear-gradient(135deg,#1e1b4b,#312e81)', 'linear-gradient(135deg,#0f172a,#1e3a5f)', 'linear-gradient(135deg,#1a1a2e,#6b21a8)', 'linear-gradient(135deg,#0c1220,#065f46)', 'linear-gradient(135deg,#3b0764,#6d28d9)'];
@@ -553,15 +554,19 @@ function renderCards() {
           <div class="item-card-subtitle">Due: ${formatDate(c.dueDate)} · Statement: ${c.statementDate ? `Day ${c.statementDate}` : '—'}</div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-          <span class="badge badge-${urgency}">${urgency === 'overdue' ? '🔴' : urgency === 'soon' ? '🟡' : '🟢'} ${urgency === 'none' ? 'No Date' : urgency.charAt(0).toUpperCase() + urgency.slice(1)}</span>
+          ${paidThisCycle
+                ? `<span class="badge badge-paid">✅ Paid</span>`
+                : `<span class="badge badge-${urgency}">${urgency === 'overdue' ? '🔴' : urgency === 'soon' ? '🟡' : '🟢'} ${urgency === 'none' ? 'No Date' : urgency.charAt(0).toUpperCase() + urgency.slice(1)}</span>`
+            }
           <div class="item-card-actions">
+            ${!paidThisCycle ? `<button class="item-btn pay" onclick="markCardPaid('${c.id}')" title="Mark as Paid">✅</button>` : ''}
             <button class="item-btn edit" onclick="openEditCard('${c.id}')" title="Edit">✏️</button>
             <button class="item-btn delete" onclick="deleteCard('${c.id}')" title="Delete">🗑️</button>
           </div>
         </div>
       </div>
       <div class="info-grid">
-        <div><div class="info-item-label">Outstanding</div><div class="info-item-value" style="color:var(--red)">${fmt(c.balance)}</div></div>
+        <div><div class="info-item-label">Outstanding</div><div class="info-item-value" style="color:${paidThisCycle ? 'var(--green)' : 'var(--red)'}">${fmt(c.balance)}</div></div>
         <div><div class="info-item-label">Min. Payment</div><div class="info-item-value">${fmt(c.minimumPayment)}</div></div>
         <div><div class="info-item-label">Credit Limit</div><div class="info-item-value">${fmt(c.creditLimit)}</div></div>
         <div><div class="info-item-label">Interest Rate</div><div class="info-item-value">${c.interestRate || 0}% / mo</div></div>
@@ -571,6 +576,7 @@ function renderCards() {
         <span>Utilization: ${utilPct.toFixed(0)}%</span>
         ${diff !== null ? `<span class="due-item-days ${urgency === 'overdue' ? 'overdue' : urgency === 'soon' ? 'soon' : 'ok'}">${formatDaysLabel(diff)}</span>` : ''}
       </div>
+      ${paidThisCycle ? `<div style="margin-top:10px;font-size:12px;color:var(--green);background:var(--green-bg);padding:8px 10px;border-radius:8px;font-weight:600">🎉 Paid on ${formatDate(c.paidAt)} — next due ${formatDate(c.dueDate)}</div>` : ''}
       ${c.notes ? `<div style="margin-top:10px;font-size:12px;color:var(--text-muted);background:var(--bg-input);padding:8px 10px;border-radius:8px">${c.notes}</div>` : ''}
     `;
         el.appendChild(card);
@@ -631,6 +637,21 @@ async function deleteCard(id) {
     await deleteRecord('creditCards', id);
     if (!currentUser) renderCards();
     toast('Credit card removed.', 'info');
+}
+
+async function markCardPaid(id) {
+    const c = STATE.creditCards.find(x => x.id === id);
+    if (!c) return;
+    if (!confirm(`Mark "${c.name}" as paid for this month?\nThis will reset the balance to ₱0 and advance the due date by 30 days.`)) return;
+    let newDueDate = c.dueDate;
+    if (c.dueDate) {
+        const d = new Date(c.dueDate + 'T00:00:00');
+        d.setDate(d.getDate() + 30);
+        newDueDate = d.toISOString().split('T')[0];
+    }
+    const updated = { ...c, balance: 0, paidAt: today(), dueDate: newDueDate, updatedAt: today() };
+    await saveRecord('creditCards', updated);
+    toast(`${c.name} marked as paid! 🎉`, 'success');
 }
 
 // =============================================

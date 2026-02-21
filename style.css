@@ -574,6 +574,7 @@ body {
 .item-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
 .item-btn.delete:hover { background: var(--red-bg); color: var(--red); border-color: rgba(248,113,113,0.3); }
 .item-btn.edit:hover { background: var(--blue-bg); color: var(--blue); border-color: rgba(56,189,248,0.3); }
+.item-btn.pay:hover { background: var(--green-bg); color: var(--green); border-color: rgba(34,211,160,0.3); }
 
 /* ---- Status Badge ---- */
 .badge {
