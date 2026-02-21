@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finance Tracker — Loans, Cards & Friends</title>
+  <meta name="description"
+    content="Track your credit cards, loans, and money lent to friends. Get reminded before due dates." />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <!-- Firebase SDK v9 (compat mode — works with our script tags) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <!-- Your Firebase config (edit this file with your keys) -->
+  <script src="firebase-config.js"></script>
+
+  <style>
+    /* ---- Sign-In Screen ---- */
+    #signInScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: var(--bg-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .signin-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 44px 40px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+      animation: fadeInUp 0.4s ease;
+    }
+
+    .signin-logo {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--accent-primary), #818cf8);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 20px;
+      box-shadow: 0 8px 24px var(--accent-glow);
+    }
+
+    .signin-title {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .signin-sub {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .signin-btn-google {
+      width: 100%;
+      padding: 13px 20px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all var(--transition);
+      margin-bottom: 12px;
+    }
+
+    .signin-btn-google:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-focus);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
+    }
+
+    .signin-btn-local {
+      width: 100%;
+      padding: 11px 20px;
+      border-radius: var(--radius-md);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .signin-btn-local:hover {
+      color: var(--text-secondary);
+    }
+
+    .signin-features {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 28px;
+      flex-wrap: wrap;
+    }
+
+    .signin-feature {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .signin-feature span:first-child {
+      font-size: 20px;
+    }
+
+    /* ---- User section in topbar ---- */
+    #userSection {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px 4px 4px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    #userSection:hover {
+      background: var(--bg-card-hover);
+    }
+
+    #userAvatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--accent-primary);
+    }
+
+    #userName {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .signout-btn {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      font-family: inherit;
+      transition: color var(--transition);
+    }
+
+    .signout-btn:hover {
+      color: var(--red);
+    }
+
+    /* Cloud sync badge in sidebar */
+    .sync-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--green-bg);
+      border: 1px solid rgba(34, 211, 160, 0.2);
+      font-size: 11px;
+      color: var(--green);
+      font-weight: 600;
+      margin: 8px 10px;
+    }
+
+    .sync-badge.offline {
+      background: var(--yellow-bg);
+      border-color: rgba(251, 191, 36, 0.2);
+      color: var(--yellow);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ===== SIGN-IN SCREEN ===== -->
+  <div id="signInScreen" style="display:none">
+    <div class="signin-card">
+      <div class="signin-logo">💰</div>
+      <div class="signin-title">Finance Tracker</div>
+      <div class="signin-sub">Sign in to sync your credit cards, loans, and lending records across all your devices.
+      </div>
+
+      <button class="signin-btn-google" onclick="signInWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z"
+            fill="#4285F4" />
+          <path
+            d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z"
+            fill="#34A853" />
+          <path
+            d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z"
+            fill="#FBBC05" />
+          <path
+            d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z"
+            fill="#EA4335" />
+        </svg>
+        Continue with Google
+      </button>
+
+      <button class="signin-btn-local" onclick="showApp(); loadFromLocalStorage(); navigate('dashboard');">
+        Continue without account (local only)
+      </button>
+
+      <div class="signin-features">
+        <div class="signin-feature"><span>☁️</span><span>Cloud Sync</span></div>
+        <div class="signin-feature"><span>📱</span><span>Any Device</span></div>
+        <div class="signin-feature"><span>🔒</span><span>Private Data</span></div>
+        <div class="signin-feature"><span>⚡</span><span>Real-time</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SIDEBAR OVERLAY (Mobile) ===== -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()" style="display:none"></div>
+
+  <!-- ===== APP SHELL ===== -->
+  <div class="app-shell" id="appShell" style="display:none">
+
+    <!-- ========== SIDEBAR ========== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">💰</div>
+        <div>
+          <div class="brand-name">FinTracker</div>
+          <div class="brand-sub">Finance Tracker</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Overview</div>
+        <button class="nav-item active" data-tab="dashboard" onclick="navigate('dashboard')">
+          <span class="nav-icon">📊</span> Dashboard
+          <span class="badge hidden" id="navBadge">0</span>
+        </button>
+
+        <div class="nav-section-label">Tracking</div>
+        <button class="nav-item" data-tab="cards" onclick="navigate('cards')">
+          <span class="nav-icon">💳</span> Credit Cards
+        </button>
+        <button class="nav-item" data-tab="loans" onclick="navigate('loans')">
+          <span class="nav-icon">🏦</span> Loans
+        </button>
+        <button class="nav-item" data-tab="friends" onclick="navigate('friends')">
+          <span class="nav-icon">👥</span> Lent to Friends
+        </button>
+      </nav>
+
+      <!-- Cloud sync status in sidebar -->
+      <div id="sidebarSyncBadge" class="sync-badge" style="display:none">
+        ☁️ Cloud Sync Active
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="nav-item" data-tab="settings" onclick="navigate('settings')">
+          <span class="nav-icon">⚙️</span> Settings
+        </button>
+      </div>
+    </aside>
+
+    <!-- ========== MAIN AREA ========== -->
+    <div class="main-area">
+
+      <!-- TOPBAR -->
+      <header class="topbar">
+        <button class="hamburger-btn" onclick="toggleMobileSidebar()">☰</button>
+        <div>
+          <div class="topbar-title" id="topbarTitle">Dashboard</div>
+          <div class="topbar-subtitle" id="topbarSubtitle">Welcome back! Here's your financial overview.</div>
+        </div>
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Search anything…" oninput="handleSearch(event)"
+            autocomplete="off" />
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn" id="notifBtn" onclick="toggleNotifPanel()" title="Notifications">
+            🔔
+            <span class="notif-dot hidden" id="notifBadge"></span>
+          </button>
+          <button class="icon-btn" onclick="exportJSON()" title="Export JSON">📥</button>
+          <!-- User profile section -->
+          <div id="userSection" style="display:none"
+            onclick="this.querySelector('.signout-btn').style.display = this.querySelector('.signout-btn').style.display === 'none' ? 'block' : 'none'">
+            <img id="userAvatar" src="" alt="avatar" onerror="this.style.display='none'" />
+            <span id="userName">User</span>
+            <button class="signout-btn" onclick="event.stopPropagation(); signOut()" style="display:none">Sign
+              out</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- PAGE CONTENT -->
+      <main class="page-content">
+
+        <!-- ===========================
+           DASHBOARD PAGE
+           =========================== -->
+        <div class="page active" id="page-dashboard">
+          <div class="stat-cards">
+            <div class="stat-card red">
+              <div class="stat-icon">💸</div>
+              <div class="stat-label">Total Owed</div>
+              <div class="stat-value" id="statTotalOwed">₱0.00</div>
+              <div class="stat-sub">Cards + Loans</div>
+            </div>
+            <div class="stat-card blue">
+              <div class="stat-icon">💳</div>
+              <div class="stat-label">Credit Card Debt</div>
+              <div class="stat-value" id="statTotalCC">₱0.00</div>
+              <div class="stat-sub">Across all cards</div>
+            </div>
+            <div class="stat-card purple">
+              <div class="stat-icon">🏦</div>
+              <div class="stat-label">Loan Balance</div>
+              <div class="stat-value" id="statTotalLoans">₱0.00</div>
+              <div class="stat-sub">All active loans</div>
+            </div>
+            <div class="stat-card yellow">
+              <div class="stat-icon">👥</div>
+              <div class="stat-label">Lent to Friends</div>
+              <div class="stat-value" id="statTotalLent">₱0.00</div>
+              <div class="stat-sub">Pending collection</div>
+            </div>
+            <div class="stat-card green">
+              <div class="stat-icon">📅</div>
+              <div class="stat-label">Upcoming Dues</div>
+              <div class="stat-value" id="statUpcoming">0</div>
+              <div class="stat-sub">Within reminder window</div>
+            </div>
+          </div>
+
+          <div class="dashboard-grid">
+            <div class="card">
+              <div class="section-header" style="margin-bottom:16px">
+                <div>
+                  <h2 style="font-size:15px">Monthly Payment Overview</h2>
+                  <p>Estimated payments for cards + loans</p>
+                </div>
+              </div>
+              <div class="chart-container">
+                <canvas id="paymentChart"></canvas>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="section-header" style="margin-bottom:0">
+                <div>
+                  <h2 style="font-size:15px">⚠️ Upcoming Dues</h2>
+                  <p>Next items approaching</p>
+                </div>
+                <span class="badge badge-overdue" id="statOverdueBadge" style="display:none">0 overdue</span>
+              </div>
+              <div id="upcomingDuesList" style="margin-top:8px"></div>
+            </div>
+          </div>
+
+          <div style="margin-top:20px">
+            <div class="section-header">
+              <h2 style="font-size:15px">⚡ Quick Add</h2>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <button class="btn btn-primary" onclick="navigate('cards'); setTimeout(openAddCard, 100)">+ Add Credit
+                Card</button>
+              <button class="btn btn-ghost" onclick="navigate('loans'); setTimeout(openAddLoan, 100)">+ Add
+                Loan</button>
+              <button class="btn btn-ghost" onclick="navigate('friends'); setTimeout(openAddFriend, 100)">+ Add Friend
+                Lending</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===========================
+           CREDIT CARDS PAGE
+           =========================== -->
+        <div class="page" id="page-cards">
+          <div class="section-header">
+            <div>
+              <h2>💳 Credit Cards</h2>
+              <p>Track due dates, statements, and outstanding balances.</p>
+            </div>
+            <button class="btn btn-primary" onclick="openAddCard()">+ Add Card</button>
+          </div>
+          <div class="grid-auto" id="cardsList"></div>
+        </div>
+
+        <!-- ===========================
+           LOANS PAGE
+           =========================== -->
+        <div class="page" id="page-loans">
+          <div class="section-header">
+            <div>
+              <h2>🏦 Loans & Lending Apps</h2>
+              <p>Monitor your personal loans, cash advances, and lending app balances.</p>
+            </div>
+            <button class="btn btn-primary" onclick="openAddLoan()">+ Add Loan</button>
+          </div>
+          <div class="grid-auto" id="loansList"></div>
+        </div>
+
+        <!-- ===========================
+           FRIENDS PAGE
+           =========================== -->
+        <div class="page" id="page-friends">
+          <div class="section-header">
+            <div>
+              <h2>👥 Lent to Friends</h2>
+              <p>Track money you've lent and get reminded when it's due.</p>
+            </div>
+            <button class="btn btn-primary" onclick="openAddFriend()">+ Add Record</button>
+          </div>
+          <div class="grid-auto" id="friendsList"></div>
+        </div>
+
+        <!-- ===========================
+           SETTINGS PAGE
+           =========================== -->
+        <div class="page" id="page-settings">
+          <div class="section-header">
+            <div>
+              <h2>⚙️ Settings</h2>
+              <p>Customize your Finance Tracker experience.</p>
+            </div>
+          </div>
+
+          <div style="max-width:600px;display:flex;flex-direction:column;gap:20px">
+
+            <!-- Cloud Sync Status -->
+            <div class="card">
+              <div class="settings-title">☁️ Cloud Sync</div>
+              <div class="setting-row" style="border:none;padding-top:0">
+                <div>
+                  <div class="setting-info-label" id="syncStatus">Checking...</div>
+                  <div class="setting-info-desc">Data syncs in real-time across all your devices</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- General -->
+            <div class="card">
+              <div class="settings-title">General</div>
+              <div class="setting-row">
+                <div>
+                  <div class="setting-info-label">Currency Symbol</div>
+                  <div class="setting-info-desc">Symbol shown before amounts</div>
+                </div>
+                <select class="form-control" id="settingCurrency" style="width:100px">
+                  <option value="₱">₱ PHP</option>
+                  <option value="$">$ USD</option>
+                  <option value="€">€ EUR</option>
+                  <option value="£">£ GBP</option>
+                  <option value="¥">¥ JPY</option>
+                </select>
+              </div>
+              <div class="setting-row">
+                <div>
+                  <div class="setting-info-label">Reminder Window</div>
+                  <div class="setting-info-desc">Days before due to show warnings</div>
+                </div>
+                <select class="form-control" id="settingReminderDays" style="width:100px">
+                  <option value="3">3 days</option>
+                  <option value="5">5 days</option>
+                  <option value="7">7 days</option>
+                  <option value="10">10 days</option>
+                  <option value="14">14 days</option>
+                </select>
+              </div>
+              <div style="margin-top:14px">
+                <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+              </div>
+            </div>
+
+            <!-- Appearance -->
+            <div class="card">
+              <div class="settings-title">Appearance</div>
+              <div class="setting-row">
+                <div>
+                  <div class="setting-info-label">Dark Mode</div>
+                  <div class="setting-info-desc">Toggle dark/light theme</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="settingDarkMode" onchange="toggleDarkMode(this.checked)" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="card">
+              <div class="settings-title">Notifications</div>
+              <div class="setting-row">
+                <div>
+                  <div class="setting-info-label">Browser Notifications</div>
+                  <div class="setting-info-desc">Permission: <span id="notifStatus">—</span></div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="settingNotif" onchange="toggleNotifications(this.checked)" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="setting-row">
+                <div>
+                  <div class="setting-info-label">Request Permission</div>
+                  <div class="setting-info-desc">Allow browser push notifications</div>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="requestNotifPermission()">Enable</button>
+              </div>
+            </div>
+
+            <!-- Data Management -->
+            <div class="card">
+              <div class="settings-title">Data Management</div>
+              <div class="setting-row">
+                <div>
+                  <div class="setting-info-label">Export JSON</div>
+                  <div class="setting-info-desc">Download all data as JSON backup</div>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="exportJSON()">📤 Export</button>
+              </div>
+              <div class="setting-row">
+                <div>
+                  <div class="setting-info-label">Export CSV</div>
+                  <div class="setting-info-desc">Download as spreadsheet (Google Sheets compatible)</div>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="exportCSV()">📊 Export</button>
+              </div>
+              <div class="setting-row">
+                <div>
+                  <div class="setting-info-label">Import CSV / JSON</div>
+                  <div class="setting-info-desc">Import from Google Sheets export or backup</div>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="triggerCSVImport()">📥 Import</button>
+              </div>
+              <div class="setting-row">
+                <div>
+                  <div class="setting-info-label" style="color:var(--red)">Clear All Data</div>
+                  <div class="setting-info-desc">Permanently delete all records (from Firestore too)</div>
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="clearAllData()">⚠️ Clear</button>
+              </div>
+            </div>
+
+            <!-- Account -->
+            <div class="card" id="accountCard">
+              <div class="settings-title">Account</div>
+              <div class="setting-row" style="border:none;padding-bottom:0">
+                <div>
+                  <div class="setting-info-label">Signed in as <span id="settingsUserEmail"
+                      style="color:var(--accent-hover)">—</span></div>
+                  <div class="setting-info-desc">Your data is private to your Google account</div>
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="signOut()">Sign Out</button>
+              </div>
+            </div>
+
+            <!-- About -->
+            <div class="card">
+              <div class="settings-title">About</div>
+              <div style="font-size:13px;color:var(--text-muted);line-height:1.8">
+                <p><strong style="color:var(--text-primary)">Finance Tracker</strong> v2.0 with Firebase Sync</p>
+                <p>Data stored in Firestore — syncs in real-time across all your devices. Works offline too.</p>
+                <p style="margin-top:8px">To set up Firebase, edit <code
+                    style="background:var(--bg-input);padding:2px 6px;border-radius:4px">firebase-config.js</code> with
+                  your project keys.</p>
+              </div>
+            </div>
+
+          </div>
+        </div><!-- /settings page -->
+
+      </main>
+    </div>
+  </div><!-- /app-shell -->
+
+  <!-- ===== FAB ===== -->
+  <button class="fab" onclick="handleFAB()" title="Quick Add" id="fabBtn" style="display:none">+</button>
+
+  <!-- ===== TOAST CONTAINER ===== -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ===== HIDDEN FILE INPUT ===== -->
+  <input type="file" id="csvFileInput" accept=".csv,.json" style="display:none" onchange="handleCSVImport(event)" />
+
+  <!-- ===== NOTIFICATION PANEL ===== -->
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-panel-header">
+      <span class="notif-panel-title">🔔 Due Date Alerts</span>
+      <button class="modal-close" onclick="document.getElementById('notifPanel').classList.remove('open')">✕</button>
+    </div>
+    <div class="notif-list" id="notifList"></div>
+  </div>
+
+  <!-- ===== CREDIT CARD MODAL ===== -->
+  <div class="modal-overlay" id="cardModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="cardModalTitle">Add Credit Card</span>
+        <button class="modal-close" onclick="closeModal('cardModal')">✕</button>
+      </div>
+      <form id="cardForm" onsubmit="e=>e.preventDefault()">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label class="form-label">Card Name *</label>
+            <input class="form-control" name="cardName" placeholder="e.g. BDO Mastercard" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bank / Issuer</label>
+            <input class="form-control" name="cardBank" placeholder="e.g. BDO, BPI, Security Bank" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last 4 Digits</label>
+            <input class="form-control" name="cardLastFour" placeholder="1234" maxlength="4" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Outstanding Balance</label>
+            <input class="form-control" name="cardBalance" type="number" step="0.01" min="0" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Credit Limit</label>
+            <input class="form-control" name="cardCreditLimit" type="number" step="0.01" min="0" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Minimum Payment</label>
+            <input class="form-control" name="cardMinPayment" type="number" step="0.01" min="0" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Interest Rate (% / mo)</label>
+            <input class="form-control" name="cardInterestRate" type="number" step="0.01" min="0" placeholder="3.5" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Statement Day</label>
+            <input class="form-control" name="cardStatementDate" type="number" min="1" max="31" placeholder="e.g. 15" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Payment Due Date</label>
+            <input class="form-control" name="cardDueDate" type="date" />
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Notes</label>
+            <input class="form-control" name="cardNotes" placeholder="Optional notes…" />
+          </div>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('cardModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveCard()">💾 Save Card</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== LOAN MODAL ===== -->
+  <div class="modal-overlay" id="loanModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="loanModalTitle">Add Loan</span>
+        <button class="modal-close" onclick="closeModal('loanModal')">✕</button>
+      </div>
+      <form id="loanForm" onsubmit="e=>e.preventDefault()">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label class="form-label">Loan Name *</label>
+            <input class="form-control" name="loanName" placeholder="e.g. Akuloan, Cashalo, SSS Salary Loan" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Lender / App</label>
+            <input class="form-control" name="loanLender" placeholder="e.g. Akuloan, Tonik" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Loan Type</label>
+            <select class="form-control" name="loanType">
+              <option>Personal Loan</option>
+              <option>Salary Loan</option>
+              <option>Lending App</option>
+              <option>Pawnshop</option>
+              <option>Cash Advance</option>
+              <option>Business Loan</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Principal Amount</label>
+            <input class="form-control" name="loanPrincipal" type="number" step="0.01" min="0" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Remaining Balance</label>
+            <input class="form-control" name="loanBalance" type="number" step="0.01" min="0" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Monthly Payment</label>
+            <input class="form-control" name="loanMonthlyPayment" type="number" step="0.01" min="0"
+              placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Interest Rate (% / yr)</label>
+            <input class="form-control" name="loanInterestRate" type="number" step="0.01" min="0" placeholder="12.0" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Start Date</label>
+            <input class="form-control" name="loanStartDate" type="date" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Next Payment Due Date</label>
+            <input class="form-control" name="loanDueDate" type="date" />
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Notes</label>
+            <input class="form-control" name="loanNotes" placeholder="Optional notes…" />
+          </div>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('loanModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveLoan()">💾 Save Loan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FRIEND MODAL ===== -->
+  <div class="modal-overlay" id="friendModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="friendModalTitle">Add Lending Record</span>
+        <button class="modal-close" onclick="closeModal('friendModal')">✕</button>
+      </div>
+      <form id="friendForm" onsubmit="e=>e.preventDefault()">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label class="form-label">Friend / Person's Name *</label>
+            <input class="form-control" name="friendName" placeholder="e.g. Juan dela Cruz" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount Lent</label>
+            <input class="form-control" name="friendAmount" type="number" step="0.01" min="0" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount Already Paid Back</label>
+            <input class="form-control" name="friendPaidAmount" type="number" step="0.01" min="0" placeholder="0.00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date Lent</label>
+            <input class="form-control" name="friendDateLent" type="date" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Expected Return Date</label>
+            <input class="form-control" name="friendDueDate" type="date" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-control" name="friendStatus">
+              <option value="pending">🟡 Pending</option>
+              <option value="partial">🔵 Partially Paid</option>
+              <option value="paid">✅ Fully Paid</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Notes / Purpose</label>
+            <input class="form-control" name="friendNotes"
+              placeholder="e.g. Emergency hospital bill, Utang para sa groceries" />
+          </div>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('friendModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveFriend()">💾 Save Record</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Show FAB and userSection once app is visible
+    const _origShowApp = window.showApp;
+    function showApp() {
+      if (typeof _origShowApp === 'function') _origShowApp();
+      document.getElementById('fabBtn').style.display = 'flex';
+      // Update account settings panel
+      setTimeout(() => {
+        const emailEl = document.getElementById('settingsUserEmail');
+        if (emailEl && window.currentUser) emailEl.textContent = currentUser.email || '';
+      }, 500);
+      // Show cloud sync badge if Firestore configured
+      if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.apiKey !== 'YOUR_API_KEY') {
+        const badge = document.getElementById('sidebarSyncBadge');
+        if (badge) badge.style.display = 'flex';
+      }
+      navigate('dashboard');
+    }
+  </script>
+  <script src="app.js"></script>
+</body>
+
+</html>
