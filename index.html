@@ -5,9 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Finance Tracker — Loans, Cards & Friends</title>
-  <meta name="description"
-    content="Track your credit cards, loans, and money lent to friends. Get reminded before due dates." />
-  <link rel="stylesheet" href="style.css" />
+  <meta name="description" <link rel="stylesheet" href="style.css" />
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <!-- Firebase SDK v9 (compat mode — works with our script tags) -->
@@ -275,7 +273,7 @@
           <span class="nav-icon">🏦</span> Loans
         </button>
         <button class="nav-item" data-tab="friends" onclick="navigate('friends')">
-          <span class="nav-icon">👥</span> Lent to Friends
+          <span class="nav-icon">👥</span> Paswipe
         </button>
       </nav>
 
@@ -351,7 +349,7 @@
             </div>
             <div class="stat-card yellow">
               <div class="stat-icon">👥</div>
-              <div class="stat-label">Lent to Friends</div>
+              <div class="stat-label">Paswipe</div>
               <div class="stat-value" id="statTotalLent">₱0.00</div>
               <div class="stat-sub">Pending collection</div>
             </div>
@@ -437,7 +435,7 @@
         <div class="page" id="page-friends">
           <div class="section-header">
             <div>
-              <h2>👥 Lent to Friends</h2>
+              <h2>👥 Paswipe</h2>
               <p>Track money you've lent and get reminded when it's due.</p>
             </div>
             <button class="btn btn-primary" onclick="openAddFriend()">+ Add Record</button>
