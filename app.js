@@ -532,6 +532,17 @@ function renderCards() {
         return;
     }
 
+    const urgencyOrder = { overdue: 0, soon: 1, ok: 2, none: 3 };
+    filtered.sort((a, b) => {
+        const aPaid = a.paidAt === today() ? 1 : 0;
+        const bPaid = b.paidAt === today() ? 1 : 0;
+        if (aPaid !== bPaid) return aPaid - bPaid;
+        // Among unpaid: sort by urgency
+        const aUrg = urgencyOrder[getUrgency(a.dueDate)] ?? 3;
+        const bUrg = urgencyOrder[getUrgency(b.dueDate)] ?? 3;
+        return aUrg - bUrg;
+    });
+
     el.innerHTML = '';
     filtered.forEach(c => {
         const paidThisCycle = c.paidAt === today();
