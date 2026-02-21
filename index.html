@@ -256,8 +256,7 @@
       <div class="sidebar-brand">
         <div class="brand-icon">💰</div>
         <div>
-          <div class="brand-name">FinTracker</div>
-          <div class="brand-sub">Finance Tracker</div>
+          <div class="brand-name">Pautang Ko</div>
         </div>
       </div>
 
@@ -763,33 +762,87 @@
             <input class="form-control" name="friendName" placeholder="e.g. Juan dela Cruz" required />
           </div>
           <div class="form-group">
-            <label class="form-label">Amount Lent</label>
-            <input class="form-control" name="friendAmount" type="number" step="0.01" min="0" placeholder="0.00" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Amount Already Paid Back</label>
-            <input class="form-control" name="friendPaidAmount" type="number" step="0.01" min="0" placeholder="0.00" />
+            <label class="form-label">Total Amount Lent</label>
+            <input class="form-control" name="friendAmount" type="number" step="0.01" min="0" placeholder="0.00"
+              oninput="autoCalcInstallment()" />
           </div>
           <div class="form-group">
             <label class="form-label">Date Lent</label>
             <input class="form-control" name="friendDateLent" type="date" />
           </div>
-          <div class="form-group">
-            <label class="form-label">Expected Return Date</label>
-            <input class="form-control" name="friendDueDate" type="date" />
+
+          <!-- Installment Toggle -->
+          <div class="form-group full"
+            style="background:var(--bg-input);border-radius:var(--radius-sm);padding:12px 14px;border:1px solid var(--border)">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div>
+                <div class="form-label" style="margin-bottom:2px">📅 Installment Plan</div>
+                <div style="font-size:11px;color:var(--text-muted)">e.g. Friend pays back monthly over 12 months</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" name="friendIsInstallment" id="friendIsInstallmentToggle"
+                  onchange="toggleInstallmentFields(this.checked)" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Status</label>
-            <select class="form-control" name="friendStatus">
-              <option value="pending">🟡 Pending</option>
-              <option value="partial">🔵 Partially Paid</option>
-              <option value="paid">✅ Fully Paid</option>
-            </select>
+
+          <!-- Installment Fields (hidden by default) -->
+          <div id="installmentFields" style="display:none;grid-column:1/-1">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">No. of Installments</label>
+                <input class="form-control" name="friendTotalInstallments" type="number" min="1" placeholder="e.g. 12"
+                  oninput="autoCalcInstallment()" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Amount per Installment</label>
+                <input class="form-control" name="friendInstallmentAmount" type="number" step="0.01" min="0"
+                  placeholder="Auto-calculated" id="friendInstallmentAmountField" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Frequency</label>
+                <select class="form-control" name="friendInstallmentFrequency">
+                  <option value="monthly">Monthly</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="biweekly">Every 2 Weeks</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">First / Next Payment Due</label>
+                <input class="form-control" name="friendDueDate" type="date" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Installments Already Paid</label>
+                <input class="form-control" name="friendInstallmentsPaid" type="number" min="0" placeholder="0" />
+              </div>
+            </div>
           </div>
+
+          <!-- Non-installment fields -->
+          <div id="nonInstallmentFields" style="display:contents">
+            <div class="form-group">
+              <label class="form-label">Amount Already Paid Back</label>
+              <input class="form-control" name="friendPaidAmount" type="number" step="0.01" min="0"
+                placeholder="0.00" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Expected Return Date</label>
+              <input class="form-control" name="friendDueDateSingle" type="date" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select class="form-control" name="friendStatus">
+                <option value="pending">🟡 Pending</option>
+                <option value="partial">🔵 Partially Paid</option>
+                <option value="paid">✅ Fully Paid</option>
+              </select>
+            </div>
+          </div>
+
           <div class="form-group full">
             <label class="form-label">Notes / Purpose</label>
-            <input class="form-control" name="friendNotes"
-              placeholder="e.g. Emergency hospital bill, Utang para sa groceries" />
+            <input class="form-control" name="friendNotes" placeholder="e.g. iPad purchase, Emergency hospital bill" />
           </div>
         </div>
       </form>
