@@ -308,10 +308,10 @@ function navigate(tab) {
     });
     const titles = {
         dashboard: ['Dashboard', 'Welcome back! Here\'s your financial overview.'],
-        cards: ['Credit Cards', 'Manage your credit cards and track statement dates.'],
-        loans: ['Loans & Lending Apps', 'Monitor your personal loans and borrowings.'],
-        friends: ['Paswipe', 'Track money you lent to friends and family.'],
-        settings: ['Settings', 'Customize your Finance Tracker experience.'],
+        cards: ['Credit Cards', ''],
+        loans: ['Loans & Lending Apps', ''],
+        friends: ['Paswipe', ''],
+        settings: ['Settings', ''],
     };
     const [title, subtitle] = titles[tab] || ['', ''];
     document.getElementById('topbarTitle').textContent = title;
