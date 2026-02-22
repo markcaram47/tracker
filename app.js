@@ -310,7 +310,7 @@ function navigate(tab) {
         dashboard: ['Dashboard', 'Welcome back! Here\'s your financial overview.'],
         cards: ['Credit Cards', 'Manage your credit cards and track statement dates.'],
         loans: ['Loans & Lending Apps', 'Monitor your personal loans and borrowings.'],
-        friends: ['Lent to Friends', 'Track money you lent to friends and family.'],
+        friends: ['Paswipe', 'Track money you lent to friends and family.'],
         settings: ['Settings', 'Customize your Finance Tracker experience.'],
     };
     const [title, subtitle] = titles[tab] || ['', ''];
