@@ -49,6 +49,7 @@ function renderCards() {
             }
           <div class="item-card-actions">
             ${!paidThisCycle ? `<button class="item-btn pay" onclick="markCardPaid('${c.id}')" title="Mark as Paid">✅</button>` : ''}
+            ${!paidThisCycle && c.balance > 0 ? `<button class="item-btn" onclick="partialPaymentCard('${c.id}')" title="Partial Payment">💸</button>` : ''}
             <button class="item-btn edit" onclick="openEditCard('${c.id}')" title="Edit">✏️</button>
             <button class="item-btn delete" onclick="deleteCard('${c.id}')" title="Delete">🗑️</button>
           </div>
@@ -66,6 +67,7 @@ function renderCards() {
         ${diff !== null ? `<span class="due-item-days ${urgency === 'overdue' ? 'overdue' : urgency === 'soon' ? 'soon' : 'ok'}">${formatDaysLabel(diff)}</span>` : ''}
       </div>
       ${paidThisCycle ? `<div style="margin-top:10px;font-size:12px;color:var(--green);background:var(--green-bg);padding:8px 10px;border-radius:8px;font-weight:600">🎉 Paid on ${formatDate(c.paidAt)} — next due ${formatDate(c.dueDate)}</div>` : ''}
+      ${c.paymentHistory && c.paymentHistory.length > 0 ? `<div style="margin-top:10px;font-size:12px;color:var(--text-muted);background:var(--bg-input);padding:8px 10px;border-radius:8px"><strong>Latest Partial Payment:</strong> ${fmt(c.paymentHistory[c.paymentHistory.length-1].amount)} on ${formatDate(c.paymentHistory[c.paymentHistory.length-1].date)}</div>` : ''}
       ${c.notes ? `<div style="margin-top:10px;font-size:12px;color:var(--text-muted);background:var(--bg-input);padding:8px 10px;border-radius:8px">${c.notes}</div>` : ''}
     `;
         el.appendChild(card);
@@ -141,4 +143,34 @@ async function markCardPaid(id) {
     const updated = { ...c, balance: 0, paidAt: today(), dueDate: newDueDate, updatedAt: today() };
     await saveRecord('creditCards', updated);
     toast(`${c.name} marked as paid! 🎉`, 'success');
+}
+
+async function partialPaymentCard(id) {
+    const c = STATE.creditCards.find(x => x.id === id);
+    if (!c) return;
+    const amountStr = prompt(`Enter partial payment amount for ${c.name}\nCurrent balance: ${fmt(c.balance)}`);
+    if (!amountStr) return;
+    const amount = parseFloat(amountStr.replace(/,/g, ''));
+    if (isNaN(amount) || amount <= 0) {
+        toast('Invalid amount', 'error');
+        return;
+    }
+    if (amount > c.balance) {
+        toast('Payment cannot exceed outstanding balance.', 'error');
+        return;
+    }
+
+    c.balance -= amount;
+
+    if (!c.paymentHistory) {
+        c.paymentHistory = [];
+    }
+    c.paymentHistory.push({
+        date: today(),
+        amount: amount
+    });
+
+    c.updatedAt = today();
+    await saveRecord('creditCards', c);
+    toast(`Partial payment of ${fmt(amount)} recorded! Remaining: ${fmt(c.balance)}`, 'success');
 }
